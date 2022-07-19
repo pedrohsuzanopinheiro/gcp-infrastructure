@@ -1,49 +1,35 @@
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "3.5.0"
-    }
-  }
-}
-
-provider "google" {
+provider "google-beta" {
   credentials = file(var.credentials_file)
 
   project = var.project
   region  = var.region
-  zone    = var.zone
 }
 
-/*
-resource "google_compute_network" "test" {
-  name                    = "composer-test-network3"
-  auto_create_subnetworks = false
+resource "google_project_service" "composer_api" {
+  provider = google-beta
+  project = var.project
+  service = "composer.googleapis.com"
+  // Disabling Cloud Composer API might irreversibly break all other
+  // environments in your project.
+  disable_on_destroy = false
 }
 
-resource "google_compute_subnetwork" "test" {
-  name          = "composer-test-subnetwork"
-  ip_cidr_range = "10.2.0.0/16"
-  network       = google_compute_network.test.id
+resource "google_project_iam_member" "service_agent_role" {
+  provider = google-beta
+  project  = var.project
+  member   = format("serviceAccount:service-%s@cloudcomposer-accounts.iam.gserviceaccount.com", var.project_number)
+  role     = "roles/composer.ServiceAgentV2Ext"
 }
 
-resource "google_service_account" "test" {
-  account_id   = "composer-env-account"
-  display_name = "Test Service Account for Composer Environment"
-}
+resource "google_composer_environment" "example_environment" {
+  provider = google-beta
+  name = "example-environment"
 
-resource "google_project_iam_member" "composer-worker" {
-  role    = "roles/composer.ServiceAgentV2Ext"
-  member  = "serviceAccount:${google_service_account.test.email}"
-}
-*/
+  config {
 
-resource "google_composer_environment" "test" {
-  name   = "example-composer-env-tf-c2"
-  
- config {
+    // Add your environment configuration here
     software_config {
-      image_version = "composer-2.0.1-airflow-2.1.4"
+      image_version = "composer-2.0.20-airflow-2.2.5"
     }
   }
 }
